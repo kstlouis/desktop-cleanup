@@ -5,6 +5,9 @@
 
 set -e
 
+# zsh/datetime provides strftime and EPOCHSECONDS; not auto-loaded in launchd context
+zmodload zsh/datetime
+
 # When run by launchd, HOME may be unset; resolve it so we use the correct Desktop
 [[ -z "$HOME" ]] && export HOME=$(eval echo ~$(id -un))
 DESKTOP="${DESKTOP:-$HOME/Desktop}"
@@ -15,9 +18,8 @@ if [[ ! -d "$DESKTOP" ]]; then
   exit 1
 fi
 
-# Log lives in the screenshots folder; ensure dir exists then redirect output there
-mkdir -p "$SCREENSHOTS_DIR"
-LOG="$SCREENSHOTS_DIR/desktop-cleanup.log"
+# Log lives outside Desktop; launchd lacks TCC permission to write inside ~/Desktop
+LOG="$HOME/Library/Logs/desktop-cleanup.log"
 exec >> "$LOG" 2>&1
 
 # Cap log size (trim to last 50KB when over 100KB)
@@ -38,36 +40,42 @@ print "---"
 print "Run: $(strftime '%Y-%m-%d %H:%M:%S' $EPOCHSECONDS)"
 print "DESKTOP: $DESKTOP"
 
-# macOS screenshot names: "Screen Shot …" or "Screenshot …" (PNG)
-is_screenshot() {
-  local name="${1:t}"
-  [[ "$name" == Screen\ Shot*.png ]] || [[ "$name" == Screenshot*.png ]]
-}
+# Use Finder via osascript for all Desktop file operations.
+# launchd agents lack Desktop TCC permission; routing through Finder bypasses this.
+result=$(osascript <<APPLESCRIPT
+tell application "Finder"
+  try
+    make new folder at (POSIX file "$DESKTOP") with properties {name:"screenshots"}
+  end try
+  set dest to (POSIX file "$SCREENSHOTS_DIR") as alias
+  set fileNames to name of every file of folder (POSIX file "$DESKTOP")
+  set moved to {}
+  repeat with fname in fileNames
+    set fstr to fname as text
+    if ((fstr starts with "Screenshot") or (fstr starts with "Screen Shot")) and fstr ends with ".png" then
+      try
+        move file fstr of folder (POSIX file "$DESKTOP") to dest
+        set end of moved to fstr
+      end try
+    end if
+  end repeat
+  set output to ""
+  repeat with fname in moved
+    set output to output & (fname as text) & linefeed
+  end repeat
+  return output
+end tell
+APPLESCRIPT
+)
 
-# Pick a destination path; if file exists, use macOS-style " copy", " copy 2", … before .png
-dest_path() {
-  local dir="$1" base="${2:t}" stem="${base%.png}"
-  local dest="$dir/$base" n=1
-  while [[ -e "$dest" ]]; do
-    if (( n == 1 )); then
-      dest="$dir/${stem} copy.png"
-    else
-      dest="$dir/${stem} copy $n.png"
-    fi
-    n=$((n+1))
-  done
-  print -r "$dest"
-}
-
-# 1. Move screenshots from Desktop into screenshots/
 moved=0
-for f in "$DESKTOP"/*.png(N); do
-  is_screenshot "$f" || continue
-  dest=$(dest_path "$SCREENSHOTS_DIR" "$f")
-  mv "$f" "$dest"
-  print "  ${dest:t}"
-  moved=$((moved+1))
-done
+while IFS= read -r fname; do
+  if [[ -n "$fname" ]]; then
+    print "  $fname"
+    moved=$((moved+1))
+  fi
+done <<< "$result"
+
 if (( moved > 0 )); then
   print "Moved: $moved screenshot(s)"
 else

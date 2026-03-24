@@ -10,11 +10,15 @@
 		<string>/Library/Application Support/Jobber/Scripts/desktop-cleanup.zsh</string>
 	</array>
 	<key>StartCalendarInterval</key>
-	<dict>
-		<key>Minute</key>
-		<integer>45</integer>
-	</dict>
+	<array>
+		<dict>
+			<key>Minute</key>
+			<integer>45</integer>
+		</dict>
+	</array>
 	<key>RunAtLoad</key>
 	<false/>
+	<key>StandardErrorPath</key>
+	<string>/tmp/desktop-cleanup-stderr.log</string>
 </dict>
 </plist>
