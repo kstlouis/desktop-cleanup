@@ -19,7 +19,10 @@ macOS-only zsh script that:
 
 ## LaunchAgent
 
-A LaunchAgent runs the script every hour at :45. Plist: `com.kstlouis.desktop-cleanup.plist` (symlinked to `~/Library/LaunchAgents/`). Script: symlinked to `/Library/Application Support/Jobber/Scripts/`. Log: **~/Library/Logs/desktop-cleanup.log** (trimmed to 100KB max).
+A LaunchAgent runs the script every hour at :45. 
+Plist: `com.kstlouis.desktop-cleanup.plist` (symlinked to `~/Library/LaunchAgents/`). 
+Script: symlinked to `/Library/Application Support/Jobber/Scripts/`. 
+Log: **~/Library/Logs/desktop-cleanup.log** (trimmed to 100KB max).
 
 ### Setup
 
