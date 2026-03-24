@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>Label</key>
-	<string>com.jobber.desktop-cleanup</string>
+	<string>com.kstlouis.desktop-cleanup</string>
 	<key>ProgramArguments</key>
 	<array>
 		<string>/bin/zsh</string>
